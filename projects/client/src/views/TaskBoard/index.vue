@@ -10,30 +10,35 @@
     </div>
     <el-divider></el-divider>
     <div class="tetris">
-        <div
-            class="tetris-degree-y"
-            v-for="(degree, index) in dateDegrees"
-            :key="degree"
-            :style="{bottom: `${index * 50}px`}"
-        >
-            <span>{{index === 6 ? `7天 ${degree}` : degree}}</span>
-        </div>
-        <div
-            class="tetris-column"
-            v-for="(member) in memberTaskData"
-            :key="member._id"
-        >
-            <div class="tetris-column-task">
-                <div
-                    class="task-block"
-                    v-for="(task, taskIndex) in member.tasks"
-                    :key="taskIndex"
-                    :style="{height: `${task.height}px`}"
-                >
-                    {{task.taskName}}
+        <div class="tetris-absolute" style="z-index: 3;left: 150px">
+            <div class="tetris-block" v-for="(degree, dateIndex) in dateDegreesReverse" :key="dateIndex">
+                <div class="tetris-block-item" v-for="(member, memberIndex) in memberTaskData" :key="memberIndex">
+                    <div>{{getCurDateTask(degree, member)}}</div>
                 </div>
             </div>
-            <span class="tetris-column-member">{{member.name}}</span>
+        </div>
+        <div class="tetris-absolute" style="z-index: 4;">
+            <div class="tetris-row">
+                <div
+                    class="tetris-row-item"
+                    v-for="(degree, index) in dateDegrees"
+                    :key="degree"
+                    :class="getIsWeekend(degree) && 'weekend'"
+                >
+                    <span>{{index === 6 ? `7天 ${degree}` : degree}}</span>
+                </div>
+            </div>
+        </div>
+        <div class="tetris-absolute" style="z-index: 2;left: 150px">
+            <div class="tetris-column">
+                <div
+                    class="tetris-column-item"
+                    v-for="(member) in memberTaskData"
+                    :key="member._id"
+                >
+                    {{member.name}}
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -41,7 +46,7 @@
 
 <script lang="ts">
 import { Component, Vue } from '@/utils/vue-decorators'
-import { format, differenceInDays, isAfter } from 'date-fns'
+import { format, differenceInDays, isAfter, isBefore, isEqual, isWeekend} from 'date-fns'
 import http from '@/utils/http'
 
 const DAY = 24 * 3600 * 1000
@@ -57,6 +62,10 @@ export default class TaskBoard extends Vue {
     members: any[] = []
     tasks: any[] = []
     memberTaskData: any[] = []
+
+    get dateDegreesReverse() {
+        return this.dateDegrees.reverse()
+    }
 
     get unAssignmentTasks() {
         return this.tasks.filter((item: any) => {
@@ -74,6 +83,10 @@ export default class TaskBoard extends Vue {
         this.dateDegrees = dateDegrees.map((item: any) => {
             return format(item, 'yyyy-MM-dd');
         });
+    }
+
+    getIsWeekend(dateStr) {
+        return isWeekend(new Date(dateStr))
     }
 
     async getMembers() {
@@ -116,6 +129,21 @@ export default class TaskBoard extends Vue {
         })
     }
 
+    getCurDateTask(dateStr: string, member: any) {
+        const _tasks = member.tasks.filter(task => {
+            const curDate = new Date(dateStr);
+            const taskEndDate = new Date(task.taskDate[1]);
+            const taskStartDate = new Date(task.taskDate[0]);
+            console.log(isEqual(curDate, taskStartDate))
+            // console.log('日期：', dateStr, `在${task.taskDate[0]}在后面吗`,isAfter(curDate, taskStartDate), `在${task.taskDate[1]}前面吗？`, isBefore(curDate, taskEndDate))
+            return (isAfter(curDate, taskStartDate) && isBefore(curDate, taskEndDate)) || (isEqual(curDate, taskStartDate)) || isEqual(curDate, taskEndDate)
+        });
+        return _tasks.reduce((prevStr: string, task: any) => {
+            prevStr = prevStr + task.taskName
+            return prevStr
+        }, '')
+    }
+
     async mounted() {
         this.generateDateDegrees()
         await this.getMembers()
@@ -144,9 +172,31 @@ export default class TaskBoard extends Vue {
             overflow-y auto
 .tetris
     position relative
-    display flex
-    min-height 700px
-    padding-left 200px
+    min-height 900px
+    &-absolute
+        position absolute
+        top 0
+        left 0
+        right 0
+        bottom 0
+    &-row
+        display flex
+        flex-direction column
+        &-item
+            width 100%
+            height 60px
+            line-height 60px
+            margin-bottom 2px
+    &-block
+        display flex
+        justify-content space-around
+        &-item
+            background #A9C9CF
+            flex 1
+            height 60px
+            line-height 60px
+            margin-bottom 2px
+            text-align center
     &-degree
         &-x
             position absolute
@@ -157,25 +207,14 @@ export default class TaskBoard extends Vue {
                 position absolute
                 background #ffffff
                 bottom -10px
-        &-y
-            position absolute
-            left 0px
-            border-bottom 1px solid red
-            width 100%
-            span
-                position absolute
-                background #ffffff
-                bottom -10px
     &-column
-        position relative
+        position absolute
         display flex
-        flex-direction column
-        justify-content flex-end
-        margin-right 10px
-        width 120px
-        &-member
-            position absolute
-            width 100%
+        width 100%
+        bottom 0
+        justify-content space-around
+        &-item
+            flex 1
             text-align center
             color green
 .task-block
@@ -190,4 +229,6 @@ export default class TaskBoard extends Vue {
     border 1px solid #333333
     border-radius 10px
     // margin-bottom 10px
+.weekend
+    background rgba(0.56, 0.31, 0.35, 0.3)
 </style>
