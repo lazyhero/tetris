@@ -42,7 +42,7 @@ export default class TaskManage extends Mixins(PageMixin) {
         type: 'DatePicker',
         title: '工期',
         props: {
-          type: 'daterange',
+          type: 'dates',
           format: 'yyyy-MM-dd',
           placeholder: '请选择任务工期',
         }

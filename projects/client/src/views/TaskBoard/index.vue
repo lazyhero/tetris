@@ -13,7 +13,11 @@
         <div class="tetris-absolute" style="z-index: 3;left: 150px">
             <div class="tetris-block" v-for="(degree, dateIndex) in dateDegreesReverse" :key="dateIndex">
                 <div class="tetris-block-item" v-for="(member, memberIndex) in memberTaskData" :key="memberIndex">
-                    <div>{{getCurDateTask(degree, member)}}</div>
+                    <div v-for="(task, taskIndex) in member.tasks" :key="taskIndex">
+                        <div v-for="(curDate, taskDateIndex) in task.taskDate" :key="taskDateIndex">
+                            <span v-if="curDate === degree">{{task.taskName}}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -48,15 +52,13 @@
 import { Component, Vue } from '@/utils/vue-decorators'
 import { format, differenceInDays, isAfter, isBefore, isEqual, isWeekend} from 'date-fns'
 import http from '@/utils/http'
+import last from 'lodash/last'
 
 const DAY = 24 * 3600 * 1000
-const TASK_WIDTH = 120;
-const TASK_HEIGHT = 50;
 
 @Component
 export default class TaskBoard extends Vue {
     curDateTime = format(new Date(), 'yyyy-MM-dd')
-    middleDateTime = format(new Date().getTime() + 7 * DAY, 'yyyy-MM-dd')
     dateDegreeSize: number = 13
     dateDegrees: any[] = []
     members: any[] = []
@@ -85,7 +87,7 @@ export default class TaskBoard extends Vue {
         });
     }
 
-    getIsWeekend(dateStr) {
+    getIsWeekend(dateStr: string) {
         return isWeekend(new Date(dateStr))
     }
 
@@ -101,7 +103,7 @@ export default class TaskBoard extends Vue {
     
     checkTaskStatus(task: any, member: any) {
         const checkId = task.taskMemberId === member._id
-        const compareEndDateResult = isAfter(new Date(), new Date(task.taskDate[1]))
+        const compareEndDateResult = isAfter(new Date(), new Date(last(task.taskDate)))
         return checkId && !compareEndDateResult;
     }
 
@@ -111,17 +113,6 @@ export default class TaskBoard extends Vue {
                 // 获取分配到的任务 & 该任务没有逾期
                 return task.taskDate && this.checkTaskStatus(task, item);
             });
-            targetTasks = targetTasks.map((task: any) => {
-                // 通过时间计算高度
-                // TODO 
-                const days = differenceInDays(new Date(task.taskDate[1]), new Date()) + 1;
-                return {
-                    ...task,
-                    days,
-                    width: TASK_WIDTH,
-                    height: TASK_HEIGHT * days
-                };
-            })
             return {
                 ...item,
                 tasks: targetTasks
@@ -130,12 +121,10 @@ export default class TaskBoard extends Vue {
     }
 
     getCurDateTask(dateStr: string, member: any) {
-        const _tasks = member.tasks.filter(task => {
+        const _tasks = member.tasks.filter((task: any) => {
             const curDate = new Date(dateStr);
-            const taskEndDate = new Date(task.taskDate[1]);
+            const taskEndDate = new Date(last(task.taskDate));
             const taskStartDate = new Date(task.taskDate[0]);
-            console.log(isEqual(curDate, taskStartDate))
-            // console.log('日期：', dateStr, `在${task.taskDate[0]}在后面吗`,isAfter(curDate, taskStartDate), `在${task.taskDate[1]}前面吗？`, isBefore(curDate, taskEndDate))
             return (isAfter(curDate, taskStartDate) && isBefore(curDate, taskEndDate)) || (isEqual(curDate, taskStartDate)) || isEqual(curDate, taskEndDate)
         });
         return _tasks.reduce((prevStr: string, task: any) => {

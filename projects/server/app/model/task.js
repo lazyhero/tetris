@@ -5,7 +5,8 @@ module.exports = app => {
     const TaskSchema = new Schema({
         taskName: {type: String},
         taskDate: {type: Array},
-        taskMemberId: {type: String}
+        taskMemberId: {type: String},
+        isWeekend: {type: Boolean},
     }, {
         versionKey: false
     })
